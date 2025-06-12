@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1" />
+ <title>당신은 생각하고 계십니까?</title>
+ <script src="https://cdn.tailwindcss.com"></script>
+ <style>
+ @font-face {
+ font-family: 'OnulGoraesilExtraBold';
+ src: url('fonts/OnulGoraesil-ExtraBold.woff') format('woff');
+ font-weight: 800;
+ font-style: normal;
+ }
+
+ /* ----- 기본 레이아웃 ----- */
+ #custom-img { display: block; width: 100%; height: auto; border-radius: 20px; transition: opacity 0.1s ease-in-out; opacity: 1; margin: 0 auto; max-width: 525px; } /* [수정] width, max-width 조정 */
+ #image-container { width: 100%; margin: 0.5rem 0; flex-shrink: 0; } /* [수정] 수평 auto 마진 제거 */
+ #black-bg-wrapper { background-color: black; width: 100vw; overflow-x: hidden; display: flex; justify-content: center; min-height: 100vh; padding: 2rem 0; transition: background-color 0.3s ease; }
+ #content { width: 80%; max-width: 560px; color: white; display:flex; flex-direction:column; height: calc(100vh - 4rem); } /* [추가] height를 뷰포트 기준으로 설정 */
+ 
+ /* ----- 채팅 로그 컨테이너 (스크롤 기능) ----- */
+ #chat-log-container { 
+ width: 100%; 
+ overflow-y: auto;
+ margin-top: 1rem; /* [수정] 음수 마진을 양수로 변경하여 간격 확보 */
+ padding: 1rem; 
+ box-sizing: border-box;
+ display: flex; 
+ flex-direction: column; 
+ gap: 0.5rem; 
+ z-index: 10;
+ flex-grow: 1; /* [추가] 남은 공간을 모두 차지하도록 설정 */
+ min-height: 0; /* [추가] flex-grow가 올바르게 작동하기 위한 설정 */
+ -ms-overflow-style: none; scrollbar-width: none;
+ }
+ #chat-log-container::-webkit-scrollbar { display: none; }
+
+ /* ----- 채팅 말풍선 스타일 ----- */
+ .chat-bubble {
+ background-color: black;
+ border: 1px solid white;
+ padding: 0.5rem 1rem;
+ border-radius: 1.5rem;
+ margin-left: auto;
+ max-width: 75%;
+ width: fit-content;
+ font-family: 'OnulGoraesilExtraBold';
+ font-size: 1.08rem;
+ transition: background-color 0.3s ease, border-color 0.3s ease;
+ word-break: break-all;
+ color: white;
+ }
+
+ /* --- 하단 컨트롤 영역 --- */
+ #bottom-controls { margin-top: auto; padding-top: 0.6rem; flex-shrink: 0; } /* [추가] flex-shrink: 0 */
+ #send-form { display: flex; gap: 0.5rem; }
+ #message-input {
+ flex-grow: 1; min-width: 0; 
+ background-color: black; color: white;
+ border: 1px solid white; border-radius: 1.5rem;
+ padding: 0.5rem 1rem; height: 40px;
+ font-family: 'OnulGoraesilExtraBold'; font-size: 1.08rem;
+ outline: none; transition: all 0.3s ease;
+ }
+
+ #final-message-box {
+ display: none; width: 100%; min-height: 40px;
+ background-color: black; border: 1px solid white;
+ border-radius: 1.5rem; padding: 1rem;
+ justify-content: center; align-items: center;
+ font-family: 'OnulGoraesilExtraBold'; font-size: 1.4rem;
+ text-align: center; transition: all 0.3s ease;
+ color: white;
+ }
+
+ #sendBtn {
+ font-family: 'OnulGoraesilExtraBold'; font-weight: 800; color: black; background-color: white; border-radius: 1.5rem; padding: 0 1rem; cursor: pointer; transition: all 0.3s ease; flex-shrink: 0; height: 40px; border: 1px solid white;
+ }
+ #sendBtn:hover { background-color: #ccc; }
+
+ /* [추가] 리셋 버튼 폰트 적용 */
+  #resetBtn {
+    font-family: 'OnulGoraesilExtraBold';
+  }
+
+ @media (max-width: 768px) {
+ #custom-img { width: 96% !important; }
+ /* [삭제] #image-container { height: auto !important; } */
+ #chat-log-container { 
+    margin-top: 1rem; /* [수정] 겹침 제거 */
+    /* [삭제] max-height: 200px; */
+  } 
+ .chat-bubble { font-size: 0.78rem !important; }
+ #content { width: 95% !important; height: calc(100vh - 2rem); padding: 1rem 0; } /* [수정] 모바일 패딩/높이 조정 */
+ #black-bg-wrapper { padding: 0; } /* [수정] 모바일 패딩 조정 */
+ #message-input, #final-message-box, #sendBtn { height: 32px; font-size: 0.8rem; }
+ #final-message-box { font-size: 1rem; padding: 0.5rem; }
+ }
+
+ /* 공통 애니메이션 */
+ .shake { animation: shake 0.3s; }
+ @keyframes shake { 0%{transform:translateY(0)} 25%{transform:translateY(-5px)} 50%{transform:translateY(5px)} 75%{transform:translateY(-5px)} 100%{transform:translateY(0)} }
+ @keyframes image-flash { 0%,100%{opacity:1} 50%{opacity:0} }
+ .flashing-image { animation: image-flash 0.9s infinite; }
+ @keyframes blink-caret { from,to{opacity:0} 50%{opacity:1} }
+ .typing-cursor::after { content:" ";display:inline-block;width:3px;height:1.3em;background-color:white;animation:blink-caret .75s step-end infinite;vertical-align:middle;margin-left:4px; }
+ </style>
+</head>
+
+<body>
+ <div id="black-bg-wrapper">
+ <div id="content">
+    <!-- [수정 시작] 리셋 버튼과 이미지 정렬을 위한 래퍼 추가 -->
+    <div class="w-full max-w-[525px] mx-auto">
+        <button id="resetBtn" class="bg-white text-black border border-black px-3 py-2 rounded-full mb-4">Reset</button> <!-- self-start 클래스 제거 -->
+        <div id="image-container"><img id="custom-img" src="https://imgur.com/gChhYuM.jpg" alt="custom image" /></div>
+    </div>
+    <!-- [수정 끝] -->
+ <div id="chat-log-container"></div>
+ <div id="bottom-controls">
+  <form id="send-form">
+   <input type="text" id="message-input" placeholder="사유없는 텍스트를 입력해보세요..." autocomplete="off">
+   <button type="submit" id="sendBtn">전송</button>
+  </form>
+  <div id="final-message-box"></div>
+ </div>
+ </div>
+ </div>
+
+<script>
+// --- 한글 타이핑 로직 (변경 없음) ---
+const HANGUL_OFFSET=0xAC00,INITIALS=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'],MEDIALS=['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'],FINALS=['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];function decomposeChar(t){const e=t.charCodeAt(0)-HANGUL_OFFSET;if(e<0||e>11171)return[t];const o=e%28,r=(e-o)/28%21,s=Math.floor(e/588),a=[INITIALS[s],MEDIALS[r]];return o>0&&a.push(FINALS[o]),a}function combineJamo(t){if(t.length<2)return t.join("");const e=INITIALS.indexOf(t[0]),o=MEDIALS.indexOf(t[1]);if(e<0||o<0)return t.join("");const r=t.length>2?FINALS.indexOf(t[2]):0,s=HANGUL_OFFSET+588*e+28*o+r;return String.fromCharCode(s)}let isTyping=!1;async function typeKoreanEffect(t,e,o){isTyping=!0,t.innerHTML="",t.classList.add("typing-cursor");let r="";for(let s of e){if(!isTyping)break;const e=decomposeChar(s);if(e.length===1)r+=e[0],t.innerHTML=r,t.classList.remove("typing-cursor"),t.classList.add("typing-cursor"),await new Promise(t=>setTimeout(t,o));else{let s=[];for(let a of e){if(!isTyping)break;s.push(a),t.innerHTML=r+combineJamo(s),t.classList.remove("typing-cursor"),t.classList.add("typing-cursor"),await new Promise(t=>setTimeout(t,o))}r+=combineJamo(s)}}t.classList.remove("typing-cursor"),t.classList.add("typing-cursor"),isTyping=!1}
+
+// --- 애플리케이션 로직 (변경 없음) ---
+const imageList=["https://imgur.com/gChhYuM.jpg","https://imgur.com/otdxvnK.jpg","https://imgur.com/QqEzLh1.jpg","https://imgur.com/cD7msyC.jpg","https://imgur.com/fRraeLM.jpg"];
+const imgElement=document.getElementById("custom-img"),bgWrapper=document.getElementById("black-bg-wrapper"),chatLogContainer=document.getElementById("chat-log-container"),sendForm=document.getElementById("send-form"),messageInput=document.getElementById("message-input"),finalMessageBox=document.getElementById("final-message-box"),resetBtn=document.getElementById("resetBtn");
+let sentCount=0,currentImageIndex=0;
+
+function initialize(){isTyping=!1,sentCount=0,currentImageIndex=0,bgWrapper.style.backgroundColor="black",imgElement.src=imageList[0],imgElement.classList.remove("shake","flashing-image"),resetBtn.style.color="black",resetBtn.style.borderColor="black",sendForm.style.display="flex",finalMessageBox.style.display="none",finalMessageBox.classList.remove("typing-cursor"),finalMessageBox.innerHTML="",messageInput.value="",chatLogContainer.innerHTML="",messageInput.focus()}
+function sendMessage(t){t.preventDefault();const e=messageInput.value.trim();if(!e||sentCount>=10)return;imgElement.classList.add("shake"),setTimeout(()=>{imgElement.classList.remove("shake")},300);const o=document.createElement("div");o.className="chat-bubble",o.textContent=e,chatLogContainer.appendChild(o),chatLogContainer.scrollTop=chatLogContainer.scrollHeight,messageInput.value="",messageInput.focus(),sentCount++,sentCount>0&&sentCount%2==0&&currentImageIndex<imageList.length-1&&(currentImageIndex++,imgElement.style.opacity=.01,setTimeout(()=>{imgElement.src=imageList[currentImageIndex],imgElement.onload=()=>{imgElement.style.opacity=1}},100)),sentCount>=10&&triggerFinalState()}
+function triggerFinalState(){sendForm.style.display="none",finalMessageBox.style.display="flex",bgWrapper.style.backgroundColor="#cc1f1f",resetBtn.style.color="#cc1f1f",resetBtn.style.borderColor="white",document.querySelectorAll(".chat-bubble").forEach(t=>{t.style.backgroundColor="#cc1f1f",t.style.borderColor="white"}),imgElement.src=imageList[imageList.length-1],setTimeout(()=>{imgElement.classList.add("flashing-image")},500),finalMessageBox.style.backgroundColor="#cc1f1f",finalMessageBox.style.borderColor="white",typeKoreanEffect(finalMessageBox,"당신은 스스로 생각해본적이 언제인가요?",120)}
+
+sendForm.addEventListener("submit",sendMessage);
+resetBtn.addEventListener("click",initialize);
+window.onload=initialize;
+</script>
+</body>
+</html>
